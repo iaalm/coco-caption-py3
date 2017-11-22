@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 # Python wrapper for METEOR implementation, by Xinlei Chen
-# Acknowledge Michael Denkowski for the generous discussion and help 
+# Acknowledge Michael Denkowski for the generous discussion and help
 
 import os
 import sys
@@ -19,6 +19,7 @@ class Meteor:
                 '-', '-', '-stdio', '-l', 'en', '-norm']
         self.meteor_p = subprocess.Popen(self.meteor_cmd, \
                 cwd=os.path.dirname(os.path.abspath(__file__)), \
+                universal_newlines=True, \
                 stdin=subprocess.PIPE, \
                 stdout=subprocess.PIPE, \
                 stderr=subprocess.PIPE)
@@ -26,8 +27,8 @@ class Meteor:
         self.lock = threading.Lock()
 
     def compute_score(self, gts, res):
-        assert(gts.keys() == res.keys())
-        imgIds = gts.keys()
+        assert(list(gts.keys()) == list(res.keys()))
+        imgIds = list(gts.keys())
         scores = []
 
         eval_line = 'EVAL'
@@ -38,9 +39,11 @@ class Meteor:
             eval_line += ' ||| {}'.format(stat)
 
         self.meteor_p.stdin.write('{}\n'.format(eval_line))
+        self.meteor_p.stdin.flush()
         for i in range(0,len(imgIds)):
             scores.append(float(self.meteor_p.stdout.readline().strip()))
         score = float(self.meteor_p.stdout.readline().strip())
+        print(score)
         self.lock.release()
 
         return score, scores
@@ -53,6 +56,7 @@ class Meteor:
         hypothesis_str = hypothesis_str.replace('|||','').replace('  ',' ')
         score_line = ' ||| '.join(('SCORE', ' ||| '.join(reference_list), hypothesis_str))
         self.meteor_p.stdin.write('{}\n'.format(score_line))
+        self.meteor_p.stdin.flush()
         return self.meteor_p.stdout.readline().strip()
 
     def _score(self, hypothesis_str, reference_list):
@@ -61,17 +65,19 @@ class Meteor:
         hypothesis_str = hypothesis_str.replace('|||','').replace('  ',' ')
         score_line = ' ||| '.join(('SCORE', ' ||| '.join(reference_list), hypothesis_str))
         self.meteor_p.stdin.write('{}\n'.format(score_line))
+        self.meteor_p.stdin.flush()
         stats = self.meteor_p.stdout.readline().strip()
         eval_line = 'EVAL ||| {}'.format(stats)
-        # EVAL ||| stats 
+        # EVAL ||| stats
         self.meteor_p.stdin.write('{}\n'.format(eval_line))
+        self.meteor_p.stdin.flush()
         score = float(self.meteor_p.stdout.readline().strip())
         # bug fix: there are two values returned by the jar file, one average, and one all, so do it twice
         # thanks for Andrej for pointing this out
         score = float(self.meteor_p.stdout.readline().strip())
         self.lock.release()
         return score
- 
+
     def __del__(self):
         self.lock.acquire()
         self.meteor_p.stdin.close()

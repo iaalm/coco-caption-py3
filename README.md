@@ -1,11 +1,15 @@
-Microsoft COCO Caption Evaluation
+Microsoft COCO Caption Evaluation (Python 3)
 ===================
 
 Evaluation codes for MS COCO caption generation.
 
 ## Requirements ##
 - java 1.8.0
-- python 2.7
+- python 3.2
+
+## modifications ##
+- 2to3
+- flush stdin for Popen processes
 
 ## Files ##
 ./
